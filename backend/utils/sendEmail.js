@@ -5,11 +5,14 @@ const nodemailer = require('nodemailer');
 
 // Create transporter once (reused for every email)
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT) || 587,
+  secure: false,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  tls: { rejectUnauthorized: false },
 });
 
 // Verify SMTP config on boot (helpful for debugging)
