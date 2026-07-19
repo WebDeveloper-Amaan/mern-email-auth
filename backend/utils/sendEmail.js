@@ -1,46 +1,43 @@
 // ============================================
-// Real email sender using Brevo HTTP API
+// Real email sender using Nodemailer + SMTP (Gmail)
 // ============================================
-const https = require('https');
+const nodemailer = require('nodemailer');
 
-console.log('✅ Brevo email client ready');
+// Create transporter once (reused for every email)
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT) || 465,
+  secure: process.env.SMTP_SECURE === 'true',
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+  tls: { rejectUnauthorized: false },
+});
+
+// Verify SMTP config on boot (helpful for debugging)
+transporter.verify((err) => {
+  if (err) {
+    console.error('❌ SMTP config error:', err.message);
+  } else {
+    console.log('✅ SMTP server ready to send emails');
+  }
+});
 
 /**
  * Send an email
  * @param {{ to: string, subject: string, html: string, text?: string }} opts
  */
 const sendEmail = async ({ to, subject, html, text }) => {
-  const data = JSON.stringify({
-    sender: { name: process.env.EMAIL_FROM_NAME || 'MERN Auth', email: process.env.EMAIL_FROM },
-    to: [{ email: to }],
+  const info = await transporter.sendMail({
+    from: `"${process.env.EMAIL_FROM_NAME || 'MERN Auth'}" <${process.env.EMAIL_FROM}>`,
+    to,
     subject,
-    htmlContent: html,
-    textContent: text,
+    text,
+    html,
   });
-
-  return new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname: 'api.brevo.com',
-      path: '/v3/smtp/email',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': process.env.BREVO_API_KEY,
-      },
-    }, (res) => {
-      let body = '';
-      res.on('data', (chunk) => body += chunk);
-      res.on('end', () => {
-        const parsed = JSON.parse(body);
-        if (res.statusCode >= 400) return reject(new Error(parsed.message || 'Email send failed'));
-        console.log(`📧 Email sent to ${to}`);
-        resolve(parsed);
-      });
-    });
-    req.on('error', reject);
-    req.write(data);
-    req.end();
-  });
+  console.log(`📧 Email sent to ${to} | messageId: ${info.messageId}`);
+  return info;
 };
 
 // Pre-built OTP email template
