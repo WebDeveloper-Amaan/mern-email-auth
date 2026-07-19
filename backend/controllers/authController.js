@@ -226,6 +226,7 @@ exports.forgotPassword = async (req, res, next) => {
 
     res.json(generic);
   } catch (err) {
+    console.error('forgotPassword error:', err.message);
     next(err);
   }
 };
