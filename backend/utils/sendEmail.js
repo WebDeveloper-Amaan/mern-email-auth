@@ -1,41 +1,28 @@
 // ============================================
-// Real email sender using Nodemailer + SMTP (Gmail)
+// Real email sender using Brevo HTTP API
 // ============================================
-const nodemailer = require('nodemailer');
+const Brevo = require('@getbrevo/brevo');
 
-// Create transporter once (reused for every email)
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  tls: { rejectUnauthorized: false },
-});
+const client = Brevo.ApiClient.instance;
+client.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
 
-// Verify SMTP config on boot (helpful for debugging)
-transporter.verify((err) => {
-  if (err) {
-    console.error('❌ SMTP config error:', err.message);
-  } else {
-    console.log('✅ SMTP server ready to send emails');
-  }
-});
+const apiInstance = new Brevo.TransactionalEmailsApi();
+
+console.log('✅ Brevo email client ready');
 
 /**
  * Send an email
  * @param {{ to: string, subject: string, html: string, text?: string }} opts
  */
 const sendEmail = async ({ to, subject, html, text }) => {
-  const info = await transporter.sendMail({
-    from: `"${process.env.EMAIL_FROM_NAME || 'MERN Auth'}" <${process.env.EMAIL_FROM}>`,
-    to,
-    subject,
-    text,
-    html,
-  });
+  const sendSmtpEmail = new Brevo.SendSmtpEmail();
+  sendSmtpEmail.subject = subject;
+  sendSmtpEmail.htmlContent = html;
+  sendSmtpEmail.sender = { name: process.env.EMAIL_FROM_NAME || 'MERN Auth', email: process.env.EMAIL_FROM };
+  sendSmtpEmail.to = [{ email: to }];
+  sendSmtpEmail.textContent = text;
+
+  const info = await apiInstance.sendTransacEmail(sendSmtpEmail);
   console.log(`📧 Email sent to ${to} | messageId: ${info.messageId}`);
   return info;
 };
