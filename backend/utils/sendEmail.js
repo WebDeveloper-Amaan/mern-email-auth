@@ -1,12 +1,7 @@
 // ============================================
 // Real email sender using Brevo HTTP API
 // ============================================
-const Brevo = require('@getbrevo/brevo');
-
-const client = Brevo.ApiClient.instance;
-client.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
-
-const apiInstance = new Brevo.TransactionalEmailsApi();
+const https = require('https');
 
 console.log('✅ Brevo email client ready');
 
@@ -15,16 +10,37 @@ console.log('✅ Brevo email client ready');
  * @param {{ to: string, subject: string, html: string, text?: string }} opts
  */
 const sendEmail = async ({ to, subject, html, text }) => {
-  const sendSmtpEmail = new Brevo.SendSmtpEmail();
-  sendSmtpEmail.subject = subject;
-  sendSmtpEmail.htmlContent = html;
-  sendSmtpEmail.sender = { name: process.env.EMAIL_FROM_NAME || 'MERN Auth', email: process.env.EMAIL_FROM };
-  sendSmtpEmail.to = [{ email: to }];
-  sendSmtpEmail.textContent = text;
+  const data = JSON.stringify({
+    sender: { name: process.env.EMAIL_FROM_NAME || 'MERN Auth', email: process.env.EMAIL_FROM },
+    to: [{ email: to }],
+    subject,
+    htmlContent: html,
+    textContent: text,
+  });
 
-  const info = await apiInstance.sendTransacEmail(sendSmtpEmail);
-  console.log(`📧 Email sent to ${to} | messageId: ${info.messageId}`);
-  return info;
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.brevo.com',
+      path: '/v3/smtp/email',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY,
+      },
+    }, (res) => {
+      let body = '';
+      res.on('data', (chunk) => body += chunk);
+      res.on('end', () => {
+        const parsed = JSON.parse(body);
+        if (res.statusCode >= 400) return reject(new Error(parsed.message || 'Email send failed'));
+        console.log(`📧 Email sent to ${to}`);
+        resolve(parsed);
+      });
+    });
+    req.on('error', reject);
+    req.write(data);
+    req.end();
+  });
 };
 
 // Pre-built OTP email template
