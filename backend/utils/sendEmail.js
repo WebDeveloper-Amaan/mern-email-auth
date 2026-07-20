@@ -3,7 +3,6 @@
 // ============================================
 const nodemailer = require('nodemailer');
 
-// Create transporter once (reused for every email)
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT) || 465,
@@ -15,7 +14,6 @@ const transporter = nodemailer.createTransport({
   tls: { rejectUnauthorized: false },
 });
 
-// Verify SMTP config on boot (helpful for debugging)
 transporter.verify((err) => {
   if (err) {
     console.error('❌ SMTP config error:', err.message);
@@ -24,10 +22,6 @@ transporter.verify((err) => {
   }
 });
 
-/**
- * Send an email
- * @param {{ to: string, subject: string, html: string, text?: string }} opts
- */
 const sendEmail = async ({ to, subject, html, text }) => {
   const info = await transporter.sendMail({
     from: `"${process.env.EMAIL_FROM_NAME || 'MERN Auth'}" <${process.env.EMAIL_FROM}>`,
