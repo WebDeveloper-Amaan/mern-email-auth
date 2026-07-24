@@ -17,6 +17,24 @@ A complete, production-ready User Authentication System built with the MERN stac
 
 ---
 
+## 🎬 Demo Video
+
+> 📺 **[Watch Full Demo on YouTube](#)** ← *(Replace with your YouTube link after recording)*
+
+The demo covers:
+- ✅ Complete registration with real OTP email delivery
+- ✅ Email verification flow
+- ✅ Login and dashboard walkthrough
+- ✅ Forgot password → OTP → reset flow
+- ✅ Live hosted version on Vercel + Render
+
+> **Note:** Email OTP works perfectly in local development with Gmail SMTP.
+> On free hosting (Render), SMTP ports are blocked by the platform.
+> This is a known free-tier limitation — not a code issue.
+> The full working demo is shown in the video above. 🎥
+
+---
+
 ## 📁 Project Structure
 
 ```

@@ -1,28 +1,82 @@
 // ============================================
-// Real email sender using Nodemailer + SMTP (Gmail)
+// Email sender — Gmail SMTP locally, Sendcorex API in production
 // ============================================
 const nodemailer = require('nodemailer');
+const https = require('https');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 465,
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  tls: { rejectUnauthorized: false },
-});
+const isProduction = process.env.NODE_ENV === 'production';
 
-transporter.verify((err) => {
-  if (err) {
-    console.error('❌ SMTP config error:', err.message);
-  } else {
-    console.log('✅ SMTP server ready to send emails');
-  }
-});
+// ── Local: Gmail SMTP ──
+let transporter;
+if (!isProduction) {
+  transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT) || 465,
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+    tls: { rejectUnauthorized: false },
+  });
 
+  transporter.verify((err) => {
+    if (err) console.error('❌ SMTP config error:', err.message);
+    else console.log('✅ SMTP server ready to send emails');
+  });
+} else {
+  console.log('✅ Sendcorex API ready to send emails');
+}
+
+// ── Production: Sendcorex HTTP API ──
+const sendViaSendcorex = ({ to, subject, html, text }) => {
+  const data = JSON.stringify({
+    from: process.env.EMAIL_FROM,
+    senderName: process.env.EMAIL_FROM_NAME || 'MERN Auth',
+    to: to,
+    subject,
+    body: html,
+    text: text || subject,
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'mail.sendcorex.com',
+      path: '/v3.0/send',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(data),
+        'Authorization': `Bearer ${process.env.SENDCOREX_API_KEY}`,
+      },
+    }, (res) => {
+      let body = '';
+      res.on('data', (chunk) => body += chunk);
+      res.on('end', () => {
+        try {
+          console.log(`📡 Sendcorex status: ${res.statusCode}, body: ${body}`);
+          if (res.statusCode >= 400) return reject(new Error(`Sendcorex error ${res.statusCode}: ${body}`));
+          if (!body) { console.log(`📧 Email sent to ${to}`); return resolve({}); }
+          const parsed = JSON.parse(body);
+          console.log(`📧 Email sent to ${to}`);
+          resolve(parsed);
+        } catch (e) {
+          reject(new Error(`Parse error: ${body}`));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(data);
+    req.end();
+  });
+};
+
+// ── Main sendEmail function ──
 const sendEmail = async ({ to, subject, html, text }) => {
+  if (isProduction) {
+    return sendViaSendcorex({ to, subject, html, text });
+  }
+
   const info = await transporter.sendMail({
     from: `"${process.env.EMAIL_FROM_NAME || 'MERN Auth'}" <${process.env.EMAIL_FROM}>`,
     to,
@@ -34,7 +88,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
   return info;
 };
 
-// Pre-built OTP email template
+// ── OTP Email Template ──
 const buildOtpEmail = (name, otp, purpose) => {
   const title = purpose === 'reset' ? 'Reset your password' : 'Verify your email';
   const intro =
