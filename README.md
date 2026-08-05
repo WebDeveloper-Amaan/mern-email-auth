@@ -19,7 +19,7 @@ A complete, production-ready User Authentication System built with the MERN stac
 
 ## 🎬 Demo Video
 
-> 📺 **[Watch Full Demo on YouTube](#)** ← *(Replace with your YouTube link after recording)*
+> 📺 **[Watch Full Demo on YouTube](#)**
 
 The demo covers:
 - ✅ Complete registration with real OTP email delivery
